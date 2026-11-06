@@ -1,21 +1,28 @@
 import { randomUUID } from "node:crypto";
-import { request as httpRequest } from "node:http";
+import type { OutgoingHttpHeaders } from "node:http";
+import { endpoint, type Reply, send } from "./client-http.ts";
 import {
+  type ClientInfo,
   decodeJson,
   type EventMap,
   type EventMethod,
   encodeJson,
+  isClientInfo,
   isResponse,
-  MAX_BODY_BYTES,
   type Result,
   validateParams,
 } from "./protocol/index.ts";
 
+export type Authorization = string | (() => string | Promise<string>);
+
 export interface ClientOptions {
   url: string;
-  authorization?: string;
+  authorization?: Authorization;
   timeoutMs?: number;
   onError?: (error: Error) => void;
+  client?: ClientInfo;
+  events?: readonly string[];
+  ca?: string;
 }
 
 export interface Client {
@@ -34,132 +41,18 @@ function asError(error: unknown): Error {
   return error instanceof Error ? error : new Error(String(error));
 }
 
-function endpoint(value: string): URL {
-  const url = new URL(value);
-
-  if (
-    url.protocol !== "http:" ||
-    !["127.0.0.1", "[::1]", "localhost"].includes(url.hostname) ||
-    url.username !== "" ||
-    url.password !== "" ||
-    url.hash !== ""
-  ) {
-    throw new Error(
-      "ACLP requires a loopback HTTP endpoint without URL credentials or a fragment.",
-    );
-  }
-
-  return url;
+function product(name: string, version: string | undefined): string {
+  return version === undefined ? name : `${name}/${version}`;
 }
 
-async function post(
-  url: URL,
-  body: Uint8Array,
-  authorization: string | undefined,
-  deadline: number,
-): Promise<{ status: number; body: Uint8Array }> {
-  const remaining = deadline - performance.now();
+export function clientHeader(client: ClientInfo): string {
+  const tokens = [product(client.name, client.version)];
 
-  if (remaining <= 0) {
-    throw new Error("ACLP request deadline exceeded.");
+  if (client.harness !== undefined) {
+    tokens.push(product(client.harness.name, client.harness.version));
   }
 
-  return new Promise((resolve, reject) => {
-    let complete = false;
-
-    const fail = (error: Error): void => {
-      complete = true;
-      reject(error);
-    };
-
-    const request = httpRequest({
-      hostname:
-        url.hostname === "localhost"
-          ? "127.0.0.1"
-          : url.hostname.replace(/^\[|\]$/g, ""),
-      port: url.port || 80,
-      path: `${url.pathname}${url.search}`,
-      method: "POST",
-      headers: {
-        host: url.host,
-        "content-type": "application/json",
-        "content-length": body.byteLength,
-        ...(authorization === undefined ? {} : { authorization }),
-      },
-      maxHeaderSize: 16_384,
-    });
-
-    const timer = setTimeout(() => {
-      request.destroy(new Error("ACLP request deadline exceeded."));
-    }, remaining);
-
-    timer.unref();
-    request.once("error", fail);
-    request.once("upgrade", (_response, socket) => {
-      socket.destroy();
-      fail(new Error("ACLP does not support HTTP protocol upgrades."));
-    });
-    request.once("close", () => {
-      clearTimeout(timer);
-
-      if (!complete) {
-        fail(new Error("ACLP connection closed before a complete response."));
-      }
-    });
-    request.once("response", (response) => {
-      const chunks: Uint8Array[] = [];
-
-      let length = 0;
-
-      response.on("data", (chunk: unknown) => {
-        if (!(chunk instanceof Uint8Array)) {
-          request.destroy(new Error("ACLP response contains invalid bytes."));
-          return;
-        }
-
-        length += chunk.byteLength;
-
-        if (length > MAX_BODY_BYTES) {
-          request.destroy(new Error("ACLP response exceeds 1 MiB."));
-          response.destroy();
-          return;
-        }
-
-        chunks.push(chunk);
-      });
-
-      response.once("error", fail);
-      response.once("aborted", () =>
-        reject(new Error("ACLP response was interrupted.")),
-      );
-      response.once("end", () => {
-        const status = response.statusCode;
-
-        if (status === undefined) {
-          reject(new Error("ACLP response has no HTTP status."));
-          return;
-        }
-
-        if (
-          status === 200 &&
-          response.headers["content-type"]
-            ?.split(";", 1)[0]
-            ?.trim()
-            .toLowerCase() !== "application/json"
-        ) {
-          reject(
-            new Error("ACLP result requires Content-Type application/json."),
-          );
-          return;
-        }
-
-        complete = true;
-        resolve({ status, body: Buffer.concat(chunks) });
-      });
-    });
-
-    request.end(body);
-  });
+  return tokens.join(" ");
 }
 
 export function createClient(options: ClientOptions): Client {
@@ -174,6 +67,20 @@ export function createClient(options: ClientOptions): Client {
   ) {
     throw new Error("ACLP timeout must be a positive finite timer duration.");
   }
+
+  if (options.client !== undefined && !isClientInfo(options.client)) {
+    throw new Error("ACLP client identity does not match ClientInfo.");
+  }
+
+  const identity =
+    options.client === undefined ? undefined : clientHeader(options.client);
+
+  if (identity !== undefined && /[^\t\x20-\x7e]/.test(identity)) {
+    throw new Error("ACLP client identity must be printable ASCII.");
+  }
+
+  const consented =
+    options.events === undefined ? undefined : new Set(options.events);
 
   const pending = new Set<Promise<void>>();
 
@@ -190,6 +97,14 @@ export function createClient(options: ClientOptions): Client {
       throw new Error("ACLP client capacity exhausted.");
     }
 
+    if (
+      consented !== undefined &&
+      !consented.has(method) &&
+      !method.startsWith("client.")
+    ) {
+      throw new Error(`ACLP method ${method} is not consented.`);
+    }
+
     const body = encodeJson({
       jsonrpc: "2.0",
       method,
@@ -202,6 +117,34 @@ export function createClient(options: ClientOptions): Client {
     }
 
     return body;
+  }
+
+  async function post(body: Uint8Array, deadline: number): Promise<Reply> {
+    const headers: OutgoingHttpHeaders = {
+      "content-type": "application/json",
+      "content-length": body.byteLength,
+    };
+
+    const authorization =
+      typeof options.authorization === "function"
+        ? await options.authorization()
+        : options.authorization;
+
+    if (authorization !== undefined) {
+      headers.authorization = authorization;
+    }
+
+    if (identity !== undefined) {
+      headers["aclp-client"] = identity;
+    }
+
+    return send(url, {
+      method: "POST",
+      headers,
+      body,
+      deadline,
+      ...(options.ca === undefined ? {} : { ca: options.ca }),
+    });
   }
 
   async function request<M extends EventMethod, T>(
@@ -218,10 +161,14 @@ export function createClient(options: ClientOptions): Client {
     active += 1;
 
     try {
-      const response = await post(url, body, options.authorization, deadline);
+      const response = await post(body, deadline);
 
       if (response.status !== 200) {
         throw new Error(`ACLP request failed with HTTP ${response.status}.`);
+      }
+
+      if (!response.json) {
+        throw new Error("ACLP result requires Content-Type application/json.");
       }
 
       const message = decodeJson(response.body);
@@ -260,7 +207,7 @@ export function createClient(options: ClientOptions): Client {
     active += 1;
 
     const task = Promise.resolve()
-      .then(() => post(url, body, options.authorization, deadline))
+      .then(() => post(body, deadline))
       .then((response) => {
         if (response.status !== 202 || response.body.byteLength !== 0) {
           throw new Error(

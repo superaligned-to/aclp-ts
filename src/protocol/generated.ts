@@ -1,7 +1,8 @@
 /**
  * Proposed profile. Validate the generic envelope before resolving a method. StandardInvocation binds the complete standard method catalog to its parameter schemas; custom installed methods validate against their installed schemas. Success result values are narrowed by each installed integration. Semantic checks remain documented separately.
  */
-export type ACLPCallbackProfileV1StandardMessages = StandardInvocation | SuccessResponse | ErrorResponse;
+export type ACLPCallbackProfileV1StandardMessages =
+  StandardInvocation | SuccessResponse | ErrorResponse | DiscoveryDocument;
 export type StandardInvocation = InvocationEnvelope &
   (
     | {
@@ -202,6 +203,21 @@ export type StandardInvocation = InvocationEnvelope &
     | {
         method: "error.occurred";
         params: ErrorOccurredParams;
+        [k: string]: unknown | undefined;
+      }
+    | {
+        method: "client.registered";
+        params: ClientRegisteredParams;
+        [k: string]: unknown | undefined;
+      }
+    | {
+        method: "client.updated";
+        params: ClientUpdatedParams;
+        [k: string]: unknown | undefined;
+      }
+    | {
+        method: "client.unregistered";
+        params: ClientUnregisteredParams;
         [k: string]: unknown | undefined;
       }
   );
@@ -505,10 +521,15 @@ export type ResourceChangedParams = {
   change: "created" | "modified" | "deleted" | "renamed";
   previousUri?: Uri;
 };
+export type MethodName = string;
 export type ErrorResponse = {
   jsonrpc: "2.0";
   id: RequestId | null;
   error: RpcError;
+};
+export type DiscoveryAuth = {
+  methods: ("token" | "oauth")[];
+  oauth?: OAuthMetadata;
 };
 
 export interface RequestEnvelope {
@@ -899,6 +920,26 @@ export interface ErrorOccurredParams {
   error: Failure;
   operation?: Operation;
 }
+export interface ClientRegisteredParams {
+  client: ClientInfo;
+  events: MethodName[];
+}
+export interface ClientInfo {
+  name: NonemptyText;
+  version?: NonemptyText;
+  harness?: SoftwareRef;
+}
+export interface SoftwareRef {
+  name: NonemptyText;
+  version?: NonemptyText;
+}
+export interface ClientUpdatedParams {
+  client: ClientInfo;
+  events: MethodName[];
+}
+export interface ClientUnregisteredParams {
+  client: ClientInfo;
+}
 export interface SuccessResponse {
   jsonrpc: "2.0";
   id: RequestId;
@@ -908,6 +949,21 @@ export interface RpcError {
   code: number;
   message: NonemptyText;
   data?: JsonValue;
+}
+export interface DiscoveryDocument {
+  name?: NonemptyText;
+  endpoint: Uri;
+  auth: DiscoveryAuth;
+  events: MethodName[];
+  requests: MethodName[];
+}
+export interface OAuthMetadata {
+  issuer: Uri;
+  authorization_endpoint: Uri;
+  token_endpoint: Uri;
+  device_authorization_endpoint?: Uri;
+  client_id?: NonemptyText;
+  scopes_supported?: NonemptyText[];
 }
 
 export const eventDefinitions = {
@@ -950,7 +1006,10 @@ export const eventDefinitions = {
   "configuration.changed": "#/definitions/ConfigurationChangedParams",
   "model.changed": "#/definitions/ModelChangedParams",
   "notification.created": "#/definitions/NotificationCreatedParams",
-  "error.occurred": "#/definitions/ErrorOccurredParams"
+  "error.occurred": "#/definitions/ErrorOccurredParams",
+  "client.registered": "#/definitions/ClientRegisteredParams",
+  "client.updated": "#/definitions/ClientUpdatedParams",
+  "client.unregistered": "#/definitions/ClientUnregisteredParams"
 } as const;
 
 export type EventMethod = keyof typeof eventDefinitions;

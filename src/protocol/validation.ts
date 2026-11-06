@@ -1,5 +1,7 @@
 import type { ValidateFunction } from "ajv";
 import {
+  type ClientInfo,
+  type DiscoveryDocument,
   type EventMap,
   type EventMethod,
   eventDefinitions,
@@ -36,6 +38,14 @@ const responseValidator = validator.compile<Response>({
     { $ref: `${schema.$id}#/definitions/SuccessResponse` },
     { $ref: `${schema.$id}#/definitions/ErrorResponse` },
   ],
+});
+
+const discoveryValidator = validator.compile<DiscoveryDocument>({
+  $ref: `${schema.$id}#/definitions/DiscoveryDocument`,
+});
+
+const clientValidator = validator.compile<ClientInfo>({
+  $ref: `${schema.$id}#/definitions/ClientInfo`,
 });
 
 const parameters = new Map<EventMethod, ValidateFunction>();
@@ -100,4 +110,38 @@ export function validateParams<Method extends EventMethod>(
     validate?.(value) === true &&
     validateSemantics(method, value)
   );
+}
+
+function httpEndpoint(value: string): boolean {
+  try {
+    const url = new URL(value);
+
+    return (
+      (url.protocol === "http:" || url.protocol === "https:") &&
+      url.username === "" &&
+      url.password === "" &&
+      url.hash === ""
+    );
+  } catch {
+    return false;
+  }
+}
+
+export function isDiscoveryDocument(
+  value: unknown,
+): value is DiscoveryDocument {
+  if (!jsonValue(value) || !discoveryValidator(value)) {
+    return false;
+  }
+
+  const events = new Set(value.events);
+
+  return (
+    httpEndpoint(value.endpoint) &&
+    value.requests.every((method) => events.has(method))
+  );
+}
+
+export function isClientInfo(value: unknown): value is ClientInfo {
+  return jsonValue(value) && clientValidator(value);
 }

@@ -1,10 +1,13 @@
 import type { IncomingMessage, Server, ServerResponse } from "node:http";
 import { createServer as createHttpServer } from "node:http";
 import {
+  type DiscoveryAuth,
+  type DiscoveryDocument,
   decodeJson,
   type EventMap,
   type EventMethod,
   encodeJson,
+  isDiscoveryDocument,
   isEnvelope,
   isEventMethod,
   isRecord,
@@ -16,13 +19,18 @@ import {
   readBody,
   sendBytes,
   sendEmpty,
-  validateTransport,
+  validateCall,
+  validateTarget,
 } from "./server-http.ts";
 
 const MAX_ACTIVE_CALLBACKS = 32;
 
+export interface CallContext {
+  client?: string;
+}
+
 export interface Callback<P> {
-  handle: (params: P) => unknown | Promise<unknown>;
+  handle: (params: P, context: CallContext) => unknown | Promise<unknown>;
   result?: Result<unknown>;
 }
 
@@ -30,9 +38,67 @@ export type Callbacks = {
   [M in EventMethod]?: Callback<EventMap[M]>;
 };
 
+export interface Discovery {
+  endpoint: string;
+  name?: string;
+  auth?: DiscoveryAuth;
+}
+
 export interface ServerOptions {
   authorization?: string;
   onError?: (error: Error) => void;
+  hosts?: readonly string[];
+  discovery?: Discovery;
+}
+
+const DISCOVERY_PATH = "/.well-known/aclp";
+
+function hostnames(values: readonly string[]): Set<string> {
+  const names = new Set<string>();
+
+  for (const value of values) {
+    let parsed: URL | undefined;
+
+    try {
+      parsed = new URL(`http://${value}`);
+    } catch {
+      parsed = undefined;
+    }
+
+    if (parsed === undefined || parsed.hostname !== value.toLowerCase()) {
+      throw new Error(`Invalid public host name: ${value}`);
+    }
+
+    names.add(parsed.hostname);
+  }
+
+  return names;
+}
+
+function discoveryDocument(
+  callbacks: Callbacks,
+  discovery: Discovery,
+  authorization: string | undefined,
+): Uint8Array {
+  const methods = Object.keys(callbacks).filter(isEventMethod);
+
+  const document: DiscoveryDocument = {
+    ...(discovery.name === undefined ? {} : { name: discovery.name }),
+    endpoint: discovery.endpoint,
+    auth: discovery.auth ?? {
+      methods: authorization === undefined ? [] : ["token"],
+    },
+    events: methods,
+    requests: methods.filter(
+      (method) => callbacks[method]?.result !== undefined,
+    ),
+  };
+
+  if (!isDiscoveryDocument(document)) {
+    throw new Error("ACLP discovery document is invalid.");
+  }
+
+  return encodeJson(document);
 }
 
 function requestId(value: unknown): string | null {
@@ -56,6 +122,12 @@ function isNotification(value: unknown): boolean {
     value.method.length > 0 &&
     !Object.hasOwn(value, "id")
   );
+}
+
+function callContext(request: IncomingMessage): CallContext {
+  const client = request.headers["aclp-client"];
+
+  return typeof client === "string" ? { client } : {};
 }
 
 function sendError(
@@ -84,6 +156,17 @@ export function createServer(
     throw new Error("Authorization must contain an HTTP scheme and credential");
   }
 
+  const hosts = hostnames(options.hosts ?? []);
+
+  if (hosts.size > 0 && options.authorization === undefined) {
+    throw new Error("Public hosts require authorization");
+  }
+
+  const discovery =
+    options.discovery === undefined
+      ? undefined
+      : discoveryDocument(callbacks, options.discovery, options.authorization);
+
   let active = 0;
 
   const report = (error: unknown): void => {
@@ -109,6 +192,7 @@ export function createServer(
     method: M,
     params: EventMap[M],
     id: string | undefined,
+    context: CallContext,
     response: ServerResponse,
     release: () => void,
   ): Promise<boolean> => {
@@ -129,7 +213,7 @@ export function createServer(
 
     if (id === undefined) {
       void Promise.resolve()
-        .then(() => callback.handle(params))
+        .then(() => callback.handle(params, context))
         .catch(report)
         .finally(release);
       sendEmpty(response, 202);
@@ -137,7 +221,7 @@ export function createServer(
     }
 
     try {
-      const result = await callback.handle(params);
+      const result = await callback.handle(params, context);
 
       if (callback.result === undefined || !callback.result.validate(result)) {
         throw new Error("Callback result does not satisfy its schema");
@@ -167,7 +251,22 @@ export function createServer(
     };
 
     try {
-      validateTransport(request, options.authorization);
+      validateTarget(request, hosts);
+
+      if (
+        request.method === "GET" &&
+        request.url?.split("?", 1)[0] === DISCOVERY_PATH
+      ) {
+        if (discovery === undefined) {
+          sendEmpty(response, 404);
+        } else {
+          sendBytes(response, 200, discovery);
+        }
+
+        return;
+      }
+
+      validateCall(request, options.authorization);
 
       if (active >= MAX_ACTIVE_CALLBACKS) {
         throw new HttpFailure(429, "Admission capacity exhausted");
@@ -226,6 +325,7 @@ export function createServer(
         message.method,
         message.params,
         message.id,
+        callContext(request),
         response,
         release,
       );

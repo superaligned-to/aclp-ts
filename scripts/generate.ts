@@ -102,6 +102,13 @@ Object.assign(definitions, {
   },
 });
 
+if (!("oneOf" in schema) || !Array.isArray(schema.oneOf)) {
+  throw new Error("Protocol schema root has no message union");
+}
+
+// json-schema-to-typescript emits only reachable definitions, so the generation input also lists the discovery document.
+schema.oneOf.push({ $ref: "#/definitions/DiscoveryDocument" });
+
 const directory = await mkdtemp(join(tmpdir(), "aclp-types-"));
 
 try {

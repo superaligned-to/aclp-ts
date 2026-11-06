@@ -21,17 +21,12 @@ function isLoopback(address: string | undefined): boolean {
   );
 }
 
-export function validateTransport(
-  request: IncomingMessage,
-  authorization: string | undefined,
-): void {
-  if (
-    !isLoopback(request.socket.remoteAddress) ||
-    !isLoopback(request.socket.localAddress)
-  ) {
-    throw new HttpFailure(403, "Loopback HTTP required");
-  }
+const LOOPBACK_HOSTS = ["localhost", "127.0.0.1", "[::1]"];
 
+export function validateTarget(
+  request: IncomingMessage,
+  hosts: ReadonlySet<string>,
+): void {
   const host = request.headers.host;
   let hostCount = 0;
 
@@ -41,22 +36,33 @@ export function validateTransport(
     }
   }
 
-  if (host === undefined || hostCount !== 1) {
-    throw new HttpFailure(403, "Invalid Host");
-  }
-
-  let target: URL;
+  let target: URL | undefined;
 
   try {
-    target = new URL(`http://${host}`);
+    target = host === undefined ? undefined : new URL(`http://${host}`);
   } catch {
+    target = undefined;
+  }
+
+  const named = target !== undefined && hosts.has(target.hostname);
+
+  if (
+    !named &&
+    (!isLoopback(request.socket.remoteAddress) ||
+      !isLoopback(request.socket.localAddress))
+  ) {
+    throw new HttpFailure(403, "Loopback HTTP required");
+  }
+
+  if (host === undefined || hostCount !== 1 || target === undefined) {
     throw new HttpFailure(403, "Invalid Host");
   }
 
   if (
-    !["localhost", "127.0.0.1", "[::1]"].includes(target.hostname) ||
+    (!named &&
+      (!LOOPBACK_HOSTS.includes(target.hostname) ||
+        Number(target.port || "80") !== request.socket.localPort)) ||
     target.host.toLowerCase() !== host.toLowerCase() ||
-    Number(target.port || "80") !== request.socket.localPort ||
     target.username !== "" ||
     target.password !== "" ||
     target.pathname !== "/" ||
@@ -68,7 +74,12 @@ export function validateTransport(
   ) {
     throw new HttpFailure(403, "Invalid request origin");
   }
+}
 
+export function validateCall(
+  request: IncomingMessage,
+  authorization: string | undefined,
+): void {
   if (authorization !== undefined) {
     const expected = createHash("sha256").update(authorization).digest();
     const supplied = createHash("sha256")

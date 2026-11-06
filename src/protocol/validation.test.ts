@@ -10,7 +10,7 @@ import {
   validateParams,
 } from "./index.ts";
 
-test("all forty generated methods accept their canonical parameters", async () => {
+test("all forty-three generated methods accept their canonical parameters", async () => {
   const examples: unknown = JSON.parse(
     await readFile(
       new URL("./event-examples.test.json", import.meta.url),
@@ -19,8 +19,8 @@ test("all forty generated methods accept their canonical parameters", async () =
   );
 
   assert.ok(Array.isArray(examples));
-  assert.equal(Object.keys(eventDefinitions).length, 40);
-  assert.equal(examples.length, 40);
+  assert.equal(Object.keys(eventDefinitions).length, 43);
+  assert.equal(examples.length, 43);
 
   for (const example of examples) {
     assert.ok(Array.isArray(example));

@@ -132,15 +132,27 @@ test("notification rejection reaches diagnostics and flush", async (t) => {
   await client.flush();
 });
 
-test("client rejects remote endpoints and invalid timer configuration", () => {
+test("client accepts remote endpoints but rejects credentials, fragments and other schemes", () => {
   for (const url of [
-    "https://example.com/events",
+    "https://aclp.example.com/events",
     "http://example.com/events",
+  ]) {
+    assert.doesNotThrow(() => createClient({ url }));
+  }
+
+  for (const url of [
+    "ftp://example.com/events",
     "http://user:password@localhost/events",
     "http://localhost/events#fragment",
   ]) {
-    assert.throws(() => createClient({ url }), /loopback/);
+    assert.throws(() => createClient({ url }), /endpoint/);
   }
+
+  assert.throws(
+    () =>
+      createClient({ url: "http://localhost/events", client: { name: "" } }),
+    /ClientInfo/,
+  );
 
   assert.throws(
     () => createClient({ url: "http://localhost/events", timeoutMs: 0 }),
