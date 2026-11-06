@@ -1,0 +1,55 @@
+{
+  "name": "@superaligned-to/aclp",
+  "version": "0.1.0",
+  "description": "TypeScript client and server for ACLP lifecycle callbacks.",
+  "type": "module",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/superaligned-to/aclp-ts.git"
+  },
+  "engines": {
+    "node": ">=22"
+  },
+  "packageManager": "pnpm@10.30.3",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "format": "biome check --write .",
+    "lint": "biome check . && markdownlint-cli2",
+    "typecheck": "tsc --noEmit",
+    "build": "tsc -p tsconfig.build.json",
+    "generate": "node scripts/generate.ts",
+    "guard": "node scripts/generate.ts --check && node scripts/guard.ts",
+    "test": "node --test src/*.test.ts src/protocol/*.test.ts scripts/*.test.ts",
+    "check": "pnpm lint && pnpm typecheck && pnpm build && pnpm guard && pnpm test",
+    "example": "node examples/context-and-errors.ts"
+  },
+  "dependencies": {
+    "ajv": "8.20.0",
+    "ajv-formats": "3.0.1"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "2.6.3",
+    "@types/node": "26.6.6",
+    "json-schema-to-typescript": "16.0.0",
+    "markdownlint-cli2": "0.24.0",
+    "typescript": "7.0.2"
+  },
+  "pnpm": {
+    "onlyBuiltDependencies": []
+  },
+  "publishConfig": {
+    "registry": "https://registry.npmjs.org",
+    "access": "public"
+  }
+}
