@@ -80,7 +80,7 @@ function discoveryDocument(
   discovery: Discovery,
   authorization: string | undefined,
 ): Uint8Array {
-  const methods = Object.keys(callbacks).filter(isEventMethod);
+  const methods = Object.keys(callbacks).filter(isEventMethod).sort();
 
   const document: DiscoveryDocument = {
     ...(discovery.name === undefined ? {} : { name: discovery.name }),

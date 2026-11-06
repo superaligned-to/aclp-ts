@@ -1,8 +1,7 @@
 /**
- * Proposed profile. Validate the generic envelope before resolving a method. StandardInvocation binds the complete standard method catalog to its parameter schemas; custom installed methods validate against their installed schemas. Success result values are narrowed by each installed integration. Semantic checks remain documented separately.
+ * Validates standard invocations and reply envelopes. Generic envelope definitions classify a message before method lookup; installed result schemas narrow success results, and the protocol document defines the semantic checks schemas cannot express.
  */
-export type ACLPCallbackProfileV1StandardMessages =
-  StandardInvocation | SuccessResponse | ErrorResponse | DiscoveryDocument;
+export type ACLPStandardMessages = StandardInvocation | SuccessResponse | ErrorResponse | DiscoveryDocument;
 export type StandardInvocation = InvocationEnvelope &
   (
     | {
