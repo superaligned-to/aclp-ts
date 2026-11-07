@@ -3,13 +3,13 @@
 TypeScript client and callback server for the [Agent Context Lifecycle Protocol](https://github.com/superaligned-to/aclp). The client sends typed lifecycle events to local or remote servers over HTTP or HTTPS; the server validates them, runs your callbacks and checks their results against a JSON Schema.
 
 ```sh
-pnpm add @superaligned-to/aclp@0.1.0
+pnpm add @superaligned/aclp@0.1.0
 ```
 
 ## Example
 
 ```ts
-import { createClient, createServer, defineResult } from "@superaligned-to/aclp";
+import { createClient, createServer, defineResult } from "@superaligned/aclp";
 
 interface ContextReply {
   context: string[];

@@ -41,7 +41,7 @@ test("the packed ESM package and declarations work in an independent consumer", 
       { cwd: consumer, encoding: "utf8", stdio: "pipe" },
     );
 
-    const source = `import { createClient, createServer, defineResult, type EventParams } from "@superaligned-to/aclp";
+    const source = `import { createClient, createServer, defineResult, type EventParams } from "@superaligned/aclp";
 import { once } from "node:events";
 
 const result = defineResult<{ context: string[] }>({

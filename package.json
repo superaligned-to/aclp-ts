@@ -1,5 +1,5 @@
 {
-  "name": "@superaligned-to/aclp",
+  "name": "@superaligned/aclp",
   "version": "0.1.0",
   "description": "TypeScript client and server for ACLP lifecycle callbacks.",
   "type": "module",
