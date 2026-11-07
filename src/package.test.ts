@@ -32,7 +32,7 @@ test("the packed package, its declarations and its aclp bin work in an independe
       "pnpm",
       [
         "add",
-        "--offline",
+        "--prefer-offline",
         "--ignore-scripts",
         "--save-exact",
         join(consumer, tarball),
