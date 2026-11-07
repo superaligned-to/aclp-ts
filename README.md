@@ -1,21 +1,35 @@
 # aclp-ts
 
-TypeScript client and callback server for the [Agent Context Lifecycle Protocol](https://github.com/superaligned-to/aclp). The client sends typed lifecycle events to local or remote servers over HTTP or HTTPS; the server validates them, runs your callbacks and checks their results against a JSON Schema.
+The TypeScript package for the [Agent Context Lifecycle Protocol](https://github.com/superaligned-to/aclp): the `aclp` CLI that connects ACLP servers to your agent harnesses, and a client and callback server for building your own.
+
+## Connect a harness
 
 ```sh
-pnpm add @superaligned/aclp@0.1.0
+npx @superaligned/aclp install claude-code
+npx @superaligned/aclp server add memory --url http://127.0.0.1:8788/aclp
+npx @superaligned/aclp status
 ```
 
-## Example
+`install` shows the exact file changes and asks before writing. Hooks run a copy of the runtime in `~/.config/aclp/runtime`, never `npx`. `server add` reads the server's `/.well-known/aclp` document, signs you in with a token or OAuth when the server asks, and lets you choose which events it receives. Credentials stay in the OS keychain or a 0600 file, never in harness configuration.
+
+| Support | Harnesses |
+| --- | --- |
+| Context before the model | Claude Code, Codex, OpenCode, Pi, OMP, Hermes Agent, Gemini CLI, Qwen Code, Factory Droid, Devin CLI, GitHub Copilot CLI, Kiro CLI, Amp, Cline CLI/SDK, OpenClaw |
+| Observe only | Cursor, Windsurf, Auggie CLI, Goose, Crush |
+| Model-initiated tool over MCP | Claude Desktop, ChatGPT Desktop, Zed |
+
+Run `npx @superaligned/aclp help` for every command and flag.
+
+## Build a server or client
+
+```sh
+pnpm add @superaligned/aclp
+```
 
 ```ts
 import { createClient, createServer, defineResult } from "@superaligned/aclp";
 
-interface ContextReply {
-  context: string[];
-}
-
-const context = defineResult<ContextReply>({
+const context = defineResult<{ context: string[] }>({
   type: "object",
   properties: { context: { type: "array", items: { type: "string" } } },
   required: ["context"],
@@ -25,11 +39,7 @@ const context = defineResult<ContextReply>({
 const server = createServer({
   "input.submitted": {
     result: context,
-    handle: ({ content }) => ({
-      context: content.some((block) => block.type === "text" && /\bclass\b/i.test(block.text))
-        ? ["Prefer pure functions and immutable values for TypeScript."]
-        : [],
-    }),
+    handle: () => ({ context: ["Prefer pure functions and immutable values."] }),
   },
 });
 
@@ -43,11 +53,7 @@ const reply = await client.request("input.submitted", {
 }, context);
 ```
 
-Notifications use `client.notify(method, params)` and `await client.flush()`. A runnable example with both delivery paths and shutdown:
-
-```sh
-pnpm example
-```
+Notifications use `client.notify(method, params)` and `await client.flush()`. The harness tooling (plan, install, registry, adapters) is exported from `@superaligned/aclp/hooks`.
 
 ## Development
 

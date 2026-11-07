@@ -1,0 +1,70 @@
+{
+  "SessionStart": {
+    "session_id": "s-1",
+    "transcript_path": "/tmp/t.jsonl",
+    "cwd": "/w",
+    "hook_event_name": "SessionStart",
+    "source": "startup"
+  },
+  "UserPromptSubmit": {
+    "session_id": "s-1",
+    "transcript_path": "/tmp/t.jsonl",
+    "cwd": "/w",
+    "hook_event_name": "UserPromptSubmit",
+    "prompt": "Add a retry to the uploader."
+  },
+  "PreToolUse": {
+    "session_id": "s-1",
+    "cwd": "/w",
+    "hook_event_name": "PreToolUse",
+    "tool_name": "Bash",
+    "tool_use_id": "toolu_1",
+    "tool_input": { "command": "pnpm test" }
+  },
+  "PostToolUse": {
+    "session_id": "s-1",
+    "cwd": "/w",
+    "hook_event_name": "PostToolUse",
+    "tool_name": "Bash",
+    "tool_use_id": "toolu_1",
+    "tool_input": { "command": "pnpm test" },
+    "tool_response": { "stdout": "ok", "stderr": "", "interrupted": false }
+  },
+  "PostToolUseFailure": {
+    "session_id": "s-1",
+    "cwd": "/w",
+    "hook_event_name": "PostToolUseFailure",
+    "tool_name": "Bash",
+    "tool_use_id": "toolu_2",
+    "tool_input": { "command": "false" },
+    "error": "Exit code 1"
+  },
+  "SubagentStart": {
+    "session_id": "s-1",
+    "cwd": "/w",
+    "hook_event_name": "SubagentStart",
+    "agent_id": "a-1",
+    "agent_type": "Explore"
+  },
+  "SubagentStop": {
+    "session_id": "s-1",
+    "cwd": "/w",
+    "hook_event_name": "SubagentStop",
+    "agent_id": "a-1",
+    "agent_type": "Explore",
+    "agent_transcript_path": "@@AGENT_TRANSCRIPT@@"
+  },
+  "Stop": {
+    "session_id": "s-1",
+    "cwd": "/w",
+    "hook_event_name": "Stop",
+    "stop_hook_active": false,
+    "transcript_path": "@@TRANSCRIPT@@"
+  },
+  "SessionEnd": {
+    "session_id": "s-1",
+    "cwd": "/w",
+    "hook_event_name": "SessionEnd",
+    "reason": "prompt_input_exit"
+  }
+}

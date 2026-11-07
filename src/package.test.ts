@@ -5,7 +5,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { test } from "node:test";
 
-test("the packed ESM package and declarations work in an independent consumer", async () => {
+test("the packed package, its declarations and its aclp bin work in an independent consumer", async () => {
   const consumer = await mkdtemp(join(tmpdir(), "aclp-consumer-"));
 
   try {
@@ -98,6 +98,17 @@ try {
       encoding: "utf8",
       stdio: "pipe",
     });
+
+    const help = execFileSync(
+      process.execPath,
+      [
+        join(consumer, "node_modules/@superaligned/aclp/dist/bin/aclp.js"),
+        "--help",
+      ],
+      { cwd: consumer, encoding: "utf8", stdio: "pipe" },
+    );
+
+    assert.match(help, /aclp install/);
   } finally {
     await rm(consumer, { recursive: true, force: true });
   }

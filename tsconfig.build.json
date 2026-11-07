@@ -2,5 +2,11 @@
   "extends": "./tsconfig.json",
   "compilerOptions": { "rootDir": "src" },
   "include": ["src/**/*.ts"],
-  "exclude": ["src/**/*.test.ts"]
+  "exclude": [
+    "src/**/*.test.ts",
+    "src/hooks/cli/**",
+    "src/hooks/aclp.ts",
+    "src/hooks/aclp-hook.ts",
+    "src/hooks/test-support.ts"
+  ]
 }

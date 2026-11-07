@@ -1,23 +1,25 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import {
+  checkBundle,
   checkStructure,
+  checkVersion,
   MAX_MODULE_LINES,
   MAX_RUNTIME_DEPENDENCIES,
+  REQUIRED,
+  REVIEWED_LIFECYCLE_SCRIPTS,
   type SourceFile,
 } from "./guard.ts";
 
-const required: SourceFile[] = [
-  "src/index.ts",
-  "src/client.ts",
-  "src/server.ts",
-  "src/protocol/index.ts",
-  "protocol-source.json",
-].map((path) => ({ path, content: "" }));
+const required: SourceFile[] = REQUIRED.map((path) => ({
+  path,
+  content: "",
+}));
 
-test("the SDK permits two runtime validators and 400 non-blank lines per authored module", () => {
+test("the package permits two runtime validators and 400 non-blank lines per authored module", () => {
   assert.equal(MAX_RUNTIME_DEPENDENCIES, 2);
   assert.equal(MAX_MODULE_LINES, 400);
+  assert.deepEqual(REVIEWED_LIFECYCLE_SCRIPTS, ["esbuild:postinstall"]);
   assert.deepEqual(checkStructure(required, ["ajv", "ajv-formats"], []), []);
 });
 
@@ -42,7 +44,7 @@ test("module line limits preserve blank-line grouping", () => {
   );
 });
 
-test("dependency counts enforce the boundary and reject install lifecycle scripts", () => {
+test("dependency counts enforce the boundary and reject unreviewed install lifecycle scripts", () => {
   assert.match(
     checkStructure(required, ["one", "two", "three"], []).join("\n"),
     /dependencies exceed/,
@@ -51,16 +53,48 @@ test("dependency counts enforce the boundary and reject install lifecycle script
     checkStructure(required, [], ["unsafe:postinstall"]).join("\n"),
     /lifecycle script is forbidden/,
   );
+  assert.deepEqual(checkStructure(required, [], ["esbuild:postinstall"]), []);
 });
 
 test("an empty or partial tree cannot pass its structural check", () => {
   assert.equal(checkStructure([], [], []).length, required.length);
   assert.match(
     checkStructure(
-      required.filter((file) => file.path !== "src/index.ts"),
+      required.filter((file) => file.path !== "src/hooks/aclp-hook.ts"),
       [],
       [],
     ).join("\n"),
-    /boundary is missing: src\/index.ts/,
+    /boundary is missing: src\/hooks\/aclp-hook.ts/,
   );
+});
+
+test("bundled bins may import only node builtins and sibling chunks", () => {
+  assert.deepEqual(
+    checkBundle([
+      {
+        path: "dist/bin/aclp.js",
+        content:
+          'import { a } from "./chunk-X.js";\nimport http from "node:http";\nexport { b } from "./chunk-Y.js";',
+      },
+    ]),
+    [],
+  );
+  assert.match(
+    checkBundle([
+      { path: "dist/bin/aclp.js", content: 'import { c } from "ajv";' },
+    ]).join("\n"),
+    /imports ajv/,
+  );
+});
+
+test("the CLI version must equal the package version", () => {
+  assert.deepEqual(
+    checkVersion('export const VERSION = "0.1.0";', "0.1.0"),
+    [],
+  );
+  assert.equal(
+    checkVersion('export const VERSION = "0.1.0";', "0.2.0").length,
+    1,
+  );
+  assert.equal(checkVersion("", "0.1.0").length, 1);
 });

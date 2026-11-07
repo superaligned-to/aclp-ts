@@ -4,8 +4,29 @@ import { fileURLToPath, pathToFileURL } from "node:url";
 
 export const MAX_MODULE_LINES = 400;
 
-// AJV and its URI/regex formats enforce the canonical Draft-07 contract.
+// AJV and its URI/regex formats enforce the canonical Draft-07 contract. The CLI adds none: its prompts library is bundled into dist/bin.
 export const MAX_RUNTIME_DEPENDENCIES = 2;
+
+// esbuild ships its binary as an optional dependency; its postinstall never runs because pnpm builds nothing.
+export const REVIEWED_LIFECYCLE_SCRIPTS = ["esbuild:postinstall"];
+
+export const REQUIRED = [
+  "src/index.ts",
+  "src/client.ts",
+  "src/server.ts",
+  "src/protocol/index.ts",
+  "protocol-source.json",
+  "src/hooks/index.ts",
+  "src/hooks/runtime.ts",
+  "src/hooks/aclp.ts",
+  "src/hooks/aclp-hook.ts",
+  "src/hooks/adapters/claude-code.ts",
+  "src/hooks/adapters/codex.ts",
+  "src/hooks/adapters/opencode.ts",
+  "src/hooks/adapters/pi.ts",
+  "src/hooks/mcp.ts",
+  "src/hooks/runtime-files.ts",
+];
 
 export interface SourceFile {
   path: string;
@@ -21,15 +42,9 @@ export function checkStructure(
 
   const names = new Set(files.map((file) => file.path));
 
-  for (const required of [
-    "src/index.ts",
-    "src/client.ts",
-    "src/server.ts",
-    "src/protocol/index.ts",
-    "protocol-source.json",
-  ]) {
+  for (const required of REQUIRED) {
     if (!names.has(required)) {
-      errors.push(`Required SDK boundary is missing: ${required}.`);
+      errors.push(`Required boundary is missing: ${required}.`);
     }
   }
 
@@ -38,7 +53,11 @@ export function checkStructure(
   }
 
   for (const script of installScripts) {
-    errors.push(`Dependency install lifecycle script is forbidden: ${script}.`);
+    if (!REVIEWED_LIFECYCLE_SCRIPTS.includes(script)) {
+      errors.push(
+        `Dependency install lifecycle script is forbidden: ${script}.`,
+      );
+    }
   }
 
   for (const file of files) {
@@ -62,6 +81,51 @@ export function checkStructure(
   }
 
   return errors;
+}
+
+const IMPORT =
+  /(?:^|[;\s])(?:import|export)\b[^"'`;]*?from\s*["']([^"']+)["']|import\(\s*["']([^"']+)["']\s*\)/g;
+
+export function checkBundle(files: readonly SourceFile[]): string[] {
+  const errors: string[] = [];
+
+  for (const file of files) {
+    for (const match of file.content.matchAll(IMPORT)) {
+      const spec = match[1] ?? match[2] ?? "";
+
+      if (!spec.startsWith("node:") && !spec.startsWith("./")) {
+        errors.push(`${file.path} imports ${spec}; bundle it into dist/bin.`);
+      }
+    }
+  }
+
+  return errors;
+}
+
+export function checkVersion(
+  versionSource: string,
+  manifestVersion: unknown,
+): string[] {
+  const declared = /export const VERSION = "([^"]+)";/.exec(versionSource)?.[1];
+
+  return declared !== undefined && declared === manifestVersion
+    ? []
+    : [
+        `src/hooks/version.ts VERSION (${declared ?? "missing"}) must equal package.json version (${String(manifestVersion)}).`,
+      ];
+}
+
+async function bundle(root: string): Promise<SourceFile[]> {
+  const dir = join(root, "dist/bin");
+
+  const names = (await readdir(dir)).filter((n) => n.endsWith(".js"));
+
+  return Promise.all(
+    names.map(async (n) => ({
+      path: `dist/bin/${n}`,
+      content: await readFile(join(dir, n), "utf8"),
+    })),
+  );
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -164,23 +228,30 @@ async function main(): Promise<void> {
   const dependencies = manifest.dependencies;
 
   if (typeof dependencies !== "object" || dependencies === null) {
-    throw new Error("SDK manifest must declare its runtime dependencies.");
+    throw new Error("The manifest must declare its runtime dependencies.");
   }
 
   const files = await sourceFiles(root);
 
-  const errors = checkStructure(
-    files,
-    Object.keys(dependencies),
-    await lifecycleScripts(root),
-  );
+  const errors = [
+    ...checkStructure(
+      files,
+      Object.keys(dependencies),
+      await lifecycleScripts(root),
+    ),
+    ...checkVersion(
+      files.find((f) => f.path === "src/hooks/version.ts")?.content ?? "",
+      manifest.version,
+    ),
+    ...checkBundle(await bundle(root)),
+  ];
 
   if (errors.length > 0) {
     throw new Error(errors.join("\n"));
   }
 
   console.log(
-    "Repository structure, module limits and dependency lifecycle checks passed.",
+    "Repository structure, module limits, self-contained bundle and dependency lifecycle checks passed.",
   );
 }
 

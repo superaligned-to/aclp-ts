@@ -1,0 +1,507 @@
+{
+  "gemini-cli": [
+    {
+      "event": "SessionStart",
+      "payload": {
+        "session_id": "g-1",
+        "transcript_path": "/t",
+        "cwd": "/w",
+        "hook_event_name": "SessionStart",
+        "timestamp": "2026-11-07T10:00:00Z",
+        "source": "startup"
+      },
+      "methods": ["session.started"]
+    },
+    {
+      "event": "BeforeAgent",
+      "payload": {
+        "session_id": "g-1",
+        "cwd": "/w",
+        "hook_event_name": "BeforeAgent",
+        "prompt": "Fix the upload retry"
+      },
+      "methods": ["input.submitted"]
+    },
+    {
+      "event": "BeforeTool",
+      "payload": {
+        "session_id": "g-1",
+        "hook_event_name": "BeforeTool",
+        "tool_name": "read_file",
+        "tool_input": { "absolute_path": "/w/a.ts" }
+      },
+      "methods": ["tool.requested"]
+    },
+    {
+      "event": "AfterTool",
+      "payload": {
+        "session_id": "g-1",
+        "hook_event_name": "AfterTool",
+        "tool_name": "read_file",
+        "tool_input": { "absolute_path": "/w/a.ts" },
+        "tool_response": {
+          "llmContent": "export {}",
+          "returnDisplay": "1 line"
+        }
+      },
+      "methods": ["tool.finished"]
+    },
+    {
+      "event": "AfterAgent",
+      "payload": {
+        "session_id": "g-1",
+        "hook_event_name": "AfterAgent",
+        "prompt": "Fix",
+        "prompt_response": "Done",
+        "stop_hook_active": false
+      },
+      "methods": ["run.finished"]
+    },
+    {
+      "event": "SessionEnd",
+      "payload": {
+        "session_id": "g-1",
+        "hook_event_name": "SessionEnd",
+        "reason": "exit"
+      },
+      "methods": ["session.ended"]
+    }
+  ],
+  "qwen-code": [
+    {
+      "event": "UserPromptSubmit",
+      "payload": {
+        "session_id": "q-1",
+        "hook_event_name": "UserPromptSubmit",
+        "prompt": "Explain the parser",
+        "permission_mode": "default"
+      },
+      "methods": ["input.submitted"]
+    },
+    {
+      "event": "PostToolUseFailure",
+      "payload": {
+        "session_id": "q-1",
+        "tool_name": "run_shell_command",
+        "tool_input": { "command": "pnpm test" },
+        "tool_use_id": "t-1",
+        "error": "exit 1"
+      },
+      "methods": ["tool.finished"]
+    },
+    {
+      "event": "Stop",
+      "payload": { "session_id": "q-1", "hook_event_name": "Stop" },
+      "methods": ["run.finished"]
+    }
+  ],
+  "droid": [
+    {
+      "event": "UserPromptSubmit",
+      "payload": {
+        "session_id": "d-1",
+        "transcript_path": "/t",
+        "cwd": "/w",
+        "permission_mode": "auto",
+        "hook_event_name": "UserPromptSubmit",
+        "prompt": "Add a test"
+      },
+      "methods": ["input.submitted"]
+    },
+    {
+      "event": "PostToolUse",
+      "payload": {
+        "session_id": "d-1",
+        "hook_event_name": "PostToolUse",
+        "tool_name": "Edit",
+        "tool_input": { "file_path": "/w/a.ts" },
+        "tool_response": { "success": true }
+      },
+      "methods": ["tool.finished"]
+    }
+  ],
+  "devin-cli": [
+    {
+      "event": "UserPromptSubmit",
+      "payload": {
+        "hook_event_name": "UserPromptSubmit",
+        "session_id": "v-1",
+        "prompt_id": "p-1",
+        "prompt": "Run the linter"
+      },
+      "methods": ["input.submitted"]
+    },
+    {
+      "event": "PreToolUse",
+      "payload": {
+        "hook_event_name": "PreToolUse",
+        "session_id": "v-1",
+        "prompt_id": "p-1",
+        "tool_name": "exec",
+        "tool_input": { "command": "pnpm lint" }
+      },
+      "methods": ["tool.requested"]
+    }
+  ],
+  "auggie": [
+    {
+      "event": "PromptSubmit",
+      "payload": {
+        "hook_event_name": "PromptSubmit",
+        "conversation_id": "a-1",
+        "cwd": "/w",
+        "workspace_roots": ["/w"],
+        "user_prompt": "Summarise the diff"
+      },
+      "methods": ["input.submitted"]
+    },
+    {
+      "event": "PostToolUse",
+      "payload": {
+        "hook_event_name": "PostToolUse",
+        "conversation_id": "a-1",
+        "tool_name": "view",
+        "tool_input": { "path": "a.ts" },
+        "tool_output": "export {}"
+      },
+      "methods": ["tool.finished"]
+    }
+  ],
+  "cursor": [
+    {
+      "event": "sessionStart",
+      "payload": {
+        "conversation_id": "c-1",
+        "generation_id": "g-1",
+        "hook_event_name": "sessionStart",
+        "session_id": "c-1",
+        "is_background_agent": false,
+        "workspace_roots": ["/w"]
+      },
+      "methods": ["session.started"]
+    },
+    {
+      "event": "beforeSubmitPrompt",
+      "payload": {
+        "conversation_id": "c-1",
+        "generation_id": "g-2",
+        "hook_event_name": "beforeSubmitPrompt",
+        "prompt": "Rename the module",
+        "attachments": []
+      },
+      "methods": ["input.submitted"]
+    },
+    {
+      "event": "postToolUseFailure",
+      "payload": {
+        "conversation_id": "c-1",
+        "hook_event_name": "postToolUseFailure",
+        "tool_name": "Shell",
+        "tool_input": { "command": "make" },
+        "tool_use_id": "u-1",
+        "error_message": "exit 2",
+        "failure_type": "error"
+      },
+      "methods": ["tool.finished"]
+    },
+    {
+      "event": "subagentStart",
+      "payload": {
+        "conversation_id": "c-1",
+        "subagent_id": "s-1",
+        "subagent_type": "explore",
+        "task": "find usages"
+      },
+      "methods": ["agent.started"]
+    },
+    {
+      "event": "stop",
+      "payload": {
+        "conversation_id": "c-1",
+        "status": "completed",
+        "loop_count": 0
+      },
+      "methods": ["run.finished"]
+    }
+  ],
+  "windsurf": [
+    {
+      "event": "pre_user_prompt",
+      "payload": {
+        "agent_action_name": "pre_user_prompt",
+        "trajectory_id": "w-1",
+        "execution_id": "e-1",
+        "timestamp": "2026-11-07T10:00:00Z",
+        "tool_info": { "user_prompt": "Add logging" }
+      },
+      "methods": ["input.submitted"]
+    },
+    {
+      "event": "post_run_command",
+      "payload": {
+        "agent_action_name": "post_run_command",
+        "trajectory_id": "w-1",
+        "execution_id": "e-2",
+        "tool_info": { "command_line": "ls", "cwd": "/w" }
+      },
+      "methods": ["tool.finished"]
+    },
+    {
+      "event": "post_cascade_response",
+      "payload": {
+        "agent_action_name": "post_cascade_response",
+        "trajectory_id": "w-1",
+        "execution_id": "e-3",
+        "tool_info": { "response": "Done" }
+      },
+      "methods": ["run.finished"]
+    }
+  ],
+  "copilot-cli": [
+    {
+      "event": "sessionStart",
+      "payload": {
+        "sessionId": "p-1",
+        "timestamp": 1762500000000,
+        "cwd": "/w",
+        "source": "new",
+        "initialPrompt": "hi"
+      },
+      "methods": ["session.started"]
+    },
+    {
+      "event": "userPromptTransformed",
+      "payload": {
+        "sessionId": "p-1",
+        "timestamp": 1762500000000,
+        "cwd": "/w",
+        "prompt": "Fix CI",
+        "transformedPrompt": "<context/>Fix CI"
+      },
+      "methods": ["input.submitted"]
+    },
+    {
+      "event": "postToolUse",
+      "payload": {
+        "sessionId": "p-1",
+        "toolName": "bash",
+        "toolArgs": "{\"command\":\"pnpm test\"}",
+        "toolResult": {
+          "resultType": "failure",
+          "textResultForLlm": "1 failing"
+        }
+      },
+      "methods": ["tool.finished"]
+    },
+    {
+      "event": "agentStop",
+      "payload": {
+        "sessionId": "p-1",
+        "transcriptPath": "/t",
+        "stopReason": "end_turn"
+      },
+      "methods": ["run.finished"]
+    }
+  ],
+  "kiro-cli": [
+    {
+      "event": "PromptSubmit",
+      "payload": {
+        "hook_event_name": "PromptSubmit",
+        "cwd": "/w",
+        "session_id": "k-1",
+        "prompt": "Write the spec"
+      },
+      "methods": ["input.submitted"]
+    },
+    {
+      "event": "PostToolUse",
+      "payload": {
+        "hook_event_name": "PostToolUse",
+        "cwd": "/w",
+        "session_id": "k-1",
+        "tool_name": "fs_write",
+        "tool_input": { "path": "a.md" },
+        "tool_response": { "success": true }
+      },
+      "methods": ["tool.finished"]
+    },
+    {
+      "event": "AgentStop",
+      "payload": {
+        "hook_event_name": "AgentStop",
+        "cwd": "/w",
+        "session_id": "k-1"
+      },
+      "methods": ["run.finished"]
+    }
+  ],
+  "goose": [
+    {
+      "event": "UserPromptSubmit",
+      "payload": {
+        "event": "UserPromptSubmit",
+        "session_id": "o-1",
+        "working_dir": "/w",
+        "prompt": "List files"
+      },
+      "methods": ["input.submitted"]
+    },
+    {
+      "event": "PreToolUse",
+      "payload": {
+        "event": "PreToolUse",
+        "session_id": "o-1",
+        "tool_name": "developer__shell",
+        "tool_input": { "command": "ls" }
+      },
+      "methods": ["tool.requested"]
+    }
+  ],
+  "crush": [
+    {
+      "event": "PostToolUse",
+      "payload": {
+        "event": "PostToolUse",
+        "hook_event_name": "PostToolUse",
+        "session_id": "313909e",
+        "cwd": "/w",
+        "tool_name": "bash",
+        "tool_input": { "command": "npm test" },
+        "tool_use_id": "call_01",
+        "tool_response": "PASS"
+      },
+      "methods": ["tool.finished"]
+    },
+    {
+      "event": "TurnEnd",
+      "payload": {
+        "event": "TurnEnd",
+        "session_id": "313909e",
+        "cwd": "/w",
+        "last_assistant_message": "Done"
+      },
+      "methods": ["run.finished"]
+    },
+    {
+      "event": "SessionEnd",
+      "payload": {
+        "event": "SessionEnd",
+        "session_id": "313909e",
+        "cwd": "/w",
+        "reason": "exit"
+      },
+      "methods": ["session.ended"]
+    }
+  ],
+  "hermes": [
+    {
+      "event": "pre_llm_call",
+      "payload": { "session_id": "h-1", "prompt": "Plan the release" },
+      "methods": ["input.submitted"]
+    },
+    {
+      "event": "post_tool_call",
+      "payload": {
+        "session_id": "h-1",
+        "tool_name": "terminal",
+        "tool_input": { "command": "ls" },
+        "tool_response": "a b"
+      },
+      "methods": ["tool.finished"]
+    },
+    {
+      "event": "subagent_start",
+      "payload": {
+        "session_id": "h-1",
+        "agent_id": "c-1",
+        "agent_type": "researcher"
+      },
+      "methods": ["agent.started"]
+    },
+    {
+      "event": "on_session_end",
+      "payload": { "session_id": "h-1", "reason": "completed" },
+      "methods": ["session.ended"]
+    }
+  ],
+  "openclaw": [
+    {
+      "event": "before_prompt_build",
+      "payload": { "sessionId": "x-1", "prompt": "Book a table" },
+      "methods": ["input.submitted"]
+    },
+    {
+      "event": "after_tool_call",
+      "payload": {
+        "sessionId": "x-1",
+        "toolName": "browser",
+        "params": { "url": "https://example.com" },
+        "result": null,
+        "error": "timeout",
+        "durationMs": 10
+      },
+      "methods": ["tool.finished"]
+    },
+    {
+      "event": "llm_output",
+      "payload": {
+        "sessionId": "x-1",
+        "usage": { "input": 100, "output": 20, "cacheRead": 50 }
+      },
+      "methods": ["model.finished"]
+    }
+  ],
+  "amp": [
+    {
+      "event": "agent.start",
+      "payload": { "threadId": "T-1", "message": "Refactor the cache" },
+      "methods": ["input.submitted"]
+    },
+    {
+      "event": "tool.result",
+      "payload": {
+        "threadId": "T-1",
+        "tool": "Bash",
+        "toolUseID": "toolu_1",
+        "status": "error"
+      },
+      "methods": ["tool.finished"]
+    }
+  ],
+  "cline-cli": [
+    {
+      "event": "prompt",
+      "payload": { "sessionId": "l-1", "prompt": "Add docs" },
+      "methods": ["input.submitted"]
+    },
+    {
+      "event": "run.after",
+      "payload": {
+        "sessionId": "l-1",
+        "usage": { "inputTokens": 120, "outputTokens": 30 }
+      },
+      "methods": ["run.finished", "model.finished"]
+    }
+  ],
+  "claude-desktop": [
+    {
+      "event": "initialize",
+      "payload": { "session_id": "m-1" },
+      "methods": ["session.started"]
+    },
+    {
+      "event": "context",
+      "payload": {
+        "session_id": "m-1",
+        "prompt": "What did we decide about retries?"
+      },
+      "methods": ["input.submitted"]
+    },
+    {
+      "event": "shutdown",
+      "payload": { "session_id": "m-1" },
+      "methods": ["session.ended"]
+    }
+  ]
+}
