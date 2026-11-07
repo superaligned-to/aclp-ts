@@ -1,4 +1,16 @@
-# aclp-ts
+<h1 align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset=".github/assets/banner-dark.svg">
+    <img alt="aclp for TypeScript" src=".github/assets/banner-light.svg" width="100%">
+  </picture>
+</h1>
+
+<p align="center">
+  <a href="https://www.npmjs.com/package/@superaligned/aclp"><img alt="npm" src="https://img.shields.io/npm/v/@superaligned/aclp?color=2f6bff"></a>
+  <a href="https://github.com/superaligned-to/aclp-ts/actions/workflows/check.yml"><img alt="check" src="https://github.com/superaligned-to/aclp-ts/actions/workflows/check.yml/badge.svg"></a>
+  <a href="https://github.com/superaligned-to/aclp"><img alt="protocol" src="https://img.shields.io/badge/protocol-ACLP-2f6bff"></a>
+  <a href="LICENSE"><img alt="MIT license" src="https://img.shields.io/badge/license-MIT-blue"></a>
+</p>
 
 The TypeScript package for the [Agent Context Lifecycle Protocol](https://github.com/superaligned-to/aclp): the `aclp` CLI that connects ACLP servers to your agent harnesses, and a client and callback server for building your own.
 
