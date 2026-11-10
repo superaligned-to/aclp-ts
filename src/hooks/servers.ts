@@ -3,6 +3,7 @@ import {
   type DiscoveryDocument,
   defineResult,
   discover,
+  type OnError,
 } from "../index.ts";
 import { HARNESSES, type HarnessId, SUPPORTED_EVENTS } from "./adapter.ts";
 import {
@@ -35,6 +36,7 @@ export interface AddOptions {
   events?: string[];
   token?: string;
   discovery?: DiscoveryDocument | null;
+  onError?: OnError;
 }
 
 export function supportedEvents(
@@ -137,6 +139,7 @@ export async function planServer(opts: AddOptions): Promise<ServerEntry> {
     events,
     requests: (discovery?.requests ?? []).filter((m) => events.includes(m)),
     auth,
+    ...(opts.onError === undefined ? {} : { onError: opts.onError }),
   };
 }
 
@@ -162,6 +165,7 @@ export async function setEvents(
   env: Env,
   name: string,
   events: string[],
+  onError?: OnError,
 ): Promise<ServerEntry> {
   const current = findServer(env, name);
 
@@ -172,6 +176,7 @@ export async function setEvents(
   const next = updateServer(env, name, {
     events: chosen,
     requests: current.requests.filter((m) => chosen.includes(m)),
+    ...(onError === undefined ? {} : { onError }),
   });
 
   await announce(env, next, "client.updated");

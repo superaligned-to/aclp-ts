@@ -26,9 +26,9 @@ Usage:
   aclp install [harness...] [--project] [--dry-run] [--yes]
   aclp uninstall [harness...] [--project] [--yes]
   aclp status [--project] [--json]
-  aclp server add [name] --url <url> [--harness <h,...> | --all] [--events <a,b>] [--token <t>] [--oauth browser|device]
+  aclp server add [name] --url <url> [--harness <h,...> | --all] [--events <a,b>] [--token <t>] [--oauth browser|device] [--on-error allow|deny]
   aclp server list [--json]
-  aclp server events <name> [--events <a,b>]
+  aclp server events <name> [--events <a,b>] [--on-error allow|deny]
   aclp server login <name> [--token <t>] [--oauth browser|device]
   aclp server logout <name>
   aclp server remove <name> [--yes]
@@ -48,6 +48,7 @@ const OPTIONS = {
   events: { type: "string" },
   token: { type: "string" },
   oauth: { type: "string" },
+  "on-error": { type: "string" },
   version: { type: "boolean", short: "v" },
   help: { type: "boolean", short: "h" },
 } as const;
@@ -116,6 +117,9 @@ export async function main(argv: string[], io: Io): Promise<number> {
     ...(values.events === undefined ? {} : { events: values.events }),
     ...(token === undefined ? {} : { token }),
     ...(values.oauth === undefined ? {} : { oauth: values.oauth }),
+    ...(values["on-error"] === undefined
+      ? {}
+      : { onError: values["on-error"] }),
     yes: values.yes === true,
   };
 

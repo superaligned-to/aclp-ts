@@ -6,6 +6,12 @@ export {
 } from "./client.ts";
 export { type DiscoverOptions, discover } from "./discover.ts";
 export {
+  FAIL_CLOSED_METHODS,
+  isOnError,
+  type OnError,
+  onErrorFor,
+} from "./on-error.ts";
+export {
   type ClientInfo,
   type DiscoveryAuth,
   type DiscoveryDocument,

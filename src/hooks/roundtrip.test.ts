@@ -203,7 +203,7 @@ test("install → server add → hook fire → server remove → uninstall, with
   assert.equal(status(p).installed, false);
 });
 
-test("a guarded server that fails blocks the prompt; notification-only servers never do", async (t) => {
+test("a failed prompt request fails open by default and blocks only when the server denies on error", async (t) => {
   const env = tempEnv(t);
 
   const p = plan("claude-code", env, "user", runtime);
@@ -220,6 +220,21 @@ test("a guarded server that fails blocks the prompt; notification-only servers n
   await registerServer(env, { ...down, requests: ["input.submitted"] });
 
   const settings = join(env.home, ".claude", "settings.json");
+
+  const allowed = await fireInstalled(env, settings, "UserPromptSubmit", {
+    session_id: "s-1",
+    prompt: "hi",
+  });
+
+  assert.equal(allowed.status, 0, allowed.stderr);
+
+  await registerServer(env, {
+    ...down,
+    requests: ["input.submitted"],
+    onError: "deny",
+  });
+
+  assert.equal(listServers(env)[0]?.onError, "deny");
 
   const blocked = await fireInstalled(env, settings, "UserPromptSubmit", {
     session_id: "s-1",

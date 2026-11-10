@@ -1,4 +1,9 @@
-import { type DiscoveryDocument, discover } from "../../index.ts";
+import {
+  type DiscoveryDocument,
+  discover,
+  isOnError,
+  type OnError,
+} from "../../index.ts";
 import { SUPPORTED_EVENTS } from "../adapter.ts";
 import {
   type Credential,
@@ -31,7 +36,16 @@ export interface ServerFlags {
   events?: string;
   token?: string;
   oauth?: string;
+  onError?: string;
   yes: boolean;
+}
+
+function onError(value: string | undefined): OnError | undefined {
+  if (value === undefined || isOnError(value)) {
+    return value;
+  }
+
+  throw new Error(`--on-error is allow or deny, not ${value}`);
 }
 
 function csv(value: string | undefined): string[] | undefined {
@@ -146,6 +160,8 @@ export async function addCommand(
     throw new Error("aclp server add needs a name and --url");
   }
 
+  const policy = onError(flags.onError);
+
   const discovery = await lookup(url);
 
   if (discovery === undefined) {
@@ -171,6 +187,7 @@ export async function addCommand(
     events,
     ...(flags.token === undefined ? {} : { token: flags.token }),
     discovery: discovery ?? null,
+    ...(policy === undefined ? {} : { onError: policy }),
   });
 
   const credential = await obtain(ui, server, discovery?.auth.oauth, flags);
@@ -196,12 +213,16 @@ export async function eventsCommand(
 ): Promise<void> {
   const server = findServer(env, name);
 
+  const policy = onError(flags.onError);
+
   const offered = supportedEvents(await lookup(server.endpoint));
 
   const events = await consent(ui, offered, csv(flags.events), server.events);
 
-  await setEvents(env, name, events);
-  ui.success(`${name} now receives ${events.length} events.`);
+  await setEvents(env, name, events, policy);
+  ui.success(
+    `${name} now receives ${events.length} events${policy === undefined ? "" : ` and fails ${policy === "allow" ? "open" : "closed"} on error`}.`,
+  );
 }
 
 export async function loginCommand(
@@ -279,7 +300,7 @@ export function listCommand(
         : s.events.join(", ");
 
     ui.note(
-      `${s.endpoint}\n${harnesses}\n${shared}${s.requests.length > 0 ? `\nanswers: ${s.requests.join(", ")}` : ""}\nauth: ${s.auth.type}`,
+      `${s.endpoint}\n${harnesses}\n${shared}${s.requests.length > 0 ? `\nanswers: ${s.requests.join(", ")}` : ""}\nauth: ${s.auth.type}\non error: ${s.onError ?? "default (deny tool and permission guards, allow the rest)"}`,
       s.name,
     );
   }

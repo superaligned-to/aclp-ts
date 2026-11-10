@@ -138,6 +138,17 @@ test("server add discovers the endpoint, stores the token and records consent", 
   assert.deepEqual(listServers(env)[0]?.requests, []);
   assert.equal(registered.length, 2);
 
+  assert.equal(
+    await main(["server", "events", "local", "--on-error", "deny"], io),
+    0,
+  );
+  assert.equal(listServers(env)[0]?.onError, "deny");
+  assert.equal(
+    await main(["server", "events", "local", "--on-error", "maybe"], io),
+    1,
+  );
+  assert.equal(listServers(env)[0]?.onError, "deny");
+
   assert.equal(await main(["server", "logout", "local"], io), 0);
   assert.equal(readCredential(env, "local"), undefined);
   assert.equal(await main(["server", "remove", "local", "--yes"], io), 0);

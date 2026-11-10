@@ -6,6 +6,7 @@ import {
   defineResult,
   type EventMap,
   type EventMethod,
+  onErrorFor,
 } from "../index.ts";
 import type { HarnessId, Message, Outcome } from "./adapter.ts";
 import { configDir, type Env } from "./env.ts";
@@ -227,7 +228,10 @@ export async function dispatch(
             const reason =
               error instanceof Error ? error.message : String(error);
 
-            blocked ??= `${server.name}: ${reason}`;
+            if (onErrorFor(message.method, server.onError) === "deny") {
+              blocked ??= `${server.name}: ${reason}`;
+            }
+
             failures.push(error instanceof Error ? error : new Error(reason));
           }
         } else {
@@ -239,7 +243,9 @@ export async function dispatch(
     } catch (error) {
       failures.push(error instanceof Error ? error : new Error(String(error)));
 
-      if (guarded.length > 0) {
+      if (
+        guarded.some((m) => onErrorFor(m.method, server.onError) === "deny")
+      ) {
         blocked ??= `${server.name}: ${failures[0]?.message ?? "failed"}`;
       }
     }

@@ -1,4 +1,5 @@
 import { join } from "node:path";
+import { isOnError, type OnError } from "../index.ts";
 import { type HarnessId, isHarness } from "./adapter.ts";
 import { configDir, type Env } from "./env.ts";
 import { isRecord, readJson, writeJson } from "./files.ts";
@@ -15,6 +16,8 @@ export interface ServerEntry {
   events: string[];
   requests: string[];
   auth: Auth;
+  /** What a failed request does; unset denies only tool and permission guards. */
+  onError?: OnError;
 }
 
 export interface Registry {
@@ -79,6 +82,7 @@ function entry(value: unknown): ServerEntry | undefined {
     events: strings(value.events),
     requests: strings(value.requests),
     auth: auth(value.auth),
+    ...(isOnError(value.onError) ? { onError: value.onError } : {}),
   };
 }
 
